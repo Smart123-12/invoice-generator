@@ -3,864 +3,702 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="theme-color" content="#16a34a">
     <title>Greenearth Organic - Admin Portal</title>
-    
-    <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: { sans: ['Inter', 'sans-serif'] },
-                    colors: {
-                        brand: {
-                            50: '#f0fdf4',
-                            100: '#dcfce7',
-                            500: '#22c55e',
-                            600: '#16a34a',
-                            700: '#15803d',
-                            800: '#166534',
-                            900: '#2e7d32', /* Primary Green */
-                        },
-                        accent: {
-                            400: '#facc15',
-                            500: '#eab308', /* Primary Yellow */
-                            600: '#ca8a04',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-
-    <!-- html2pdf for PDF generation -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    
-    <!-- EmailJS -->
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
-        .view { display: none !important; }
-        .view.active { display: block !important; animation: fadeIn 0.3s ease; }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(5px); }
-            to { opacity: 1; transform: translateY(0); }
+        body { font-family: system-ui, -apple-system, sans-serif; background: #f0f9f0; color: #111; margin: 0; padding: 0; height: 100vh; overflow: hidden; }
+        .view { display: none; } .view.active { display: block; animation: fadeIn 0.2s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @media print { body, .view { display:none!important; } #print-area { display:block!important; width:100%; } }
+        /* Layout */
+        #app-layout { display: flex; height: 100vh; }
+        #sidebar { width: 250px; background: #2d7a2d; color: white; display: flex; flex-direction: column; }
+        #main-content { flex: 1; overflow-y: auto; padding-bottom: 70px; }
+        @media (max-width: 768px) {
+            #app-layout { flex-direction: column; }
+            #sidebar { display: none; }
+            #bottom-nav { display: flex; }
         }
-
-        /* Print styles */
-        @media print {
-            body { background: white; margin: 0; padding: 0; }
-            .no-print { display: none !important; }
-            #print-container { display: block !important; width: 100%; border: none; box-shadow: none; padding: 20px;}
-        }
-
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: #f1f1f1; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        #bottom-nav { display: none; position: fixed; bottom: 0; width: 100%; background: #2d7a2d; color: white; height: 60px; justify-content: space-around; items-center; z-index: 50; }
+        .nav-item { padding: 12px; cursor: pointer; text-align: center; font-size: 13px; }
+        .nav-item:hover, .nav-item.active { background: #1e5a1e; }
+        .btn { background: #2d7a2d; color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer; border: none; }
+        .btn:hover { background: #1e5a1e; }
+        .btn-red { background: #ef4444; } .btn-red:hover { background: #dc2626; }
+        input, select, textarea { width: 100%; padding: 8px; margin: 4px 0 12px; border: 1px solid #ccc; border-radius: 4px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { border: 1px solid #e5e7eb; padding: 10px; text-align: left; }
+        th { background: #f9fafb; font-weight: 600; }
+        /* Pure CSS Chart */
+        .chart { display: flex; align-items: flex-end; height: 150px; gap: 10px; border-bottom: 2px solid #ccc; padding-bottom: 5px; margin-top:20px; }
+        .bar { background: #2d7a2d; width: 40px; text-align: center; color: white; font-size: 10px; display: flex; flex-direction: column; justify-content: flex-end; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .print-box { max-width: 800px; margin: auto; background: white; padding: 30px; color: black; }
+        .print-header { display: flex; justify-content: space-between; border-bottom: 2px solid #2d7a2d; padding-bottom: 10px; margin-bottom: 20px; }
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+        .bg-green { background: #dcfce7; color: #166534; } .bg-yellow { background: #fef08a; color: #854d0e; }
     </style>
 </head>
-<body class="text-gray-800 antialiased h-screen flex flex-col overflow-x-hidden">
+<body>
 
-    <!-- ============================================== -->
-    <!-- SECURE LOGIN SCREEN                            -->
-    <!-- ============================================== -->
-    <div id="loginView" class="view active min-h-screen flex items-center justify-center bg-brand-900 bg-opacity-10 py-12 px-4 sm:px-6 lg:px-8">
-        <div class="max-w-md w-full space-y-8 bg-white p-10 rounded-xl shadow-2xl border border-gray-100">
-            <div>
-                <div class="mx-auto h-20 w-20 bg-brand-100 text-brand-900 rounded-full flex items-center justify-center mb-4">
-                    <svg class="h-10 w-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7z"></path></svg>
-                </div>
-                <h2 class="text-center text-3xl font-extrabold text-gray-900">Owner Portal</h2>
-                <p class="mt-2 text-center text-sm text-gray-600">Greenearth Organic Secure System</p>
+<!-- Login View -->
+<div id="view-login" class="view h-screen flex justify-center items-center bg-gray-100 p-4">
+    <div class="card w-full max-w-sm">
+        <h2 class="text-2xl font-bold text-center text-[#2d7a2d] mb-6">🌿 Greenearth Organic</h2>
+        <form onsubmit="doLogin(event)">
+            <label>Username</label><input type="text" id="l-user" required>
+            <label>Password</label><input type="password" id="l-pass" required>
+            <button type="submit" class="btn w-full mt-4">Login</button>
+        </form>
+    </div>
+</div>
+
+<!-- PIN View -->
+<div id="view-pin" class="view h-screen flex justify-center items-center bg-gray-100 p-4">
+    <div class="card w-full max-w-sm">
+        <h2 class="text-xl font-bold text-center mb-6">Enter 2FA PIN</h2>
+        <form onsubmit="doPin(event)">
+            <input type="password" id="l-pin" maxlength="4" placeholder="4-digit PIN" required class="text-center text-xl tracking-widest">
+            <button type="submit" class="btn w-full mt-4">Verify</button>
+        </form>
+    </div>
+</div>
+
+<!-- Main App Layout -->
+<div id="app-layout" class="view">
+    <!-- Desktop Sidebar -->
+    <div id="sidebar">
+        <div class="p-6 font-bold text-xl border-b border-[#1e5a1e]">🌿 Greenearth</div>
+        <div class="flex-1 overflow-y-auto">
+            <div class="nav-item" onclick="nav('dashboard')">Dashboard</div>
+            <div class="nav-item" onclick="nav('create')">New Invoice</div>
+            <div class="nav-item" onclick="nav('invoices')">All Invoices</div>
+            <div class="nav-item" onclick="nav('customers')">Customers</div>
+            <div class="nav-item" onclick="nav('inventory')">Inventory</div>
+            <div class="nav-item" onclick="nav('reports')">Reports</div>
+            <div class="nav-item" onclick="nav('settings')">Settings</div>
+        </div>
+        <div class="p-4"><button onclick="doLogout()" class="btn w-full bg-[#1e5a1e]">Logout</button></div>
+    </div>
+
+    <!-- Mobile Bottom Nav -->
+    <div id="bottom-nav">
+        <div class="nav-item flex-1" onclick="nav('dashboard')">🏠 Dash</div>
+        <div class="nav-item flex-1" onclick="nav('create')">➕ Inv</div>
+        <div class="nav-item flex-1" onclick="nav('inventory')">📦 Stk</div>
+        <div class="nav-item flex-1" onclick="nav('settings')">⚙️ Set</div>
+    </div>
+
+    <!-- Content Area -->
+    <div id="main-content" class="p-4 md:p-8 relative">
+        <div id="timeout-warn" class="hidden absolute top-0 left-0 w-full bg-yellow-500 text-white text-center py-2 z-50">Auto-logout in <span id="tout-sec">120</span>s. Click anywhere to stay logged in.</div>
+        
+        <!-- DASHBOARD -->
+        <div id="view-dashboard" class="view">
+            <h2 class="text-2xl font-bold mb-4 text-[#2d7a2d]">Dashboard</h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                <div class="card !mb-0"><h3 class="text-gray-500 text-sm">Total Revenue</h3><p class="text-2xl font-bold" id="d-rev">₹0</p></div>
+                <div class="card !mb-0"><h3 class="text-gray-500 text-sm">Total Paid</h3><p class="text-2xl font-bold text-green-600" id="d-paid">₹0</p></div>
+                <div class="card !mb-0"><h3 class="text-gray-500 text-sm">Amount Pending</h3><p class="text-2xl font-bold text-red-600" id="d-pend">₹0</p></div>
+                <div class="card !mb-0"><h3 class="text-gray-500 text-sm">This Month</h3><p class="text-2xl font-bold text-blue-600" id="d-month">₹0</p></div>
             </div>
-            <div class="mt-8 space-y-6" id="loginForm">
-                <div class="rounded-md shadow-sm space-y-4">
-                    <div>
-                        <label for="username" class="block text-sm font-medium text-gray-700">Username</label>
-                        <input id="username" type="text" required class="appearance-none block w-full px-3 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-brand-500 focus:border-brand-500 mt-1" placeholder="admin" value="admin">
-                    </div>
-                    <div>
-                        <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
-                        <input id="password" type="password" required class="appearance-none block w-full px-3 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-brand-500 focus:border-brand-500 mt-1" placeholder="1234" value="1234">
-                    </div>
-                </div>
-
-                <div>
-                    <button type="button" onclick="handleLogin(event)" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-base font-medium text-white bg-brand-900 hover:bg-brand-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 transition-colors">
-                        Sign In to System
-                    </button>
+            <button class="btn mb-6" onclick="nav('create')">➕ Create New Invoice</button>
+            <div class="card">
+                <h3 class="font-bold mb-4">Recent Invoices</h3>
+                <div class="overflow-x-auto">
+                    <table>
+                        <thead><tr><th>Invoice</th><th>Date</th><th>Customer</th><th>Amount</th><th>Status</th></tr></thead>
+                        <tbody id="d-recent-list"></tbody>
+                    </table>
                 </div>
             </div>
         </div>
+
+        <!-- CREATE INVOICE -->
+        <div id="view-create" class="view max-w-4xl mx-auto">
+            <h2 class="text-2xl font-bold mb-4 text-[#2d7a2d]">New Tax Invoice</h2>
+            <form id="frm-inv" class="card" onsubmit="saveInvoice(event)">
+                <div class="grid md:grid-cols-2 gap-4 border-b pb-4 mb-4">
+                    <div>
+                        <label>Customer Name *</label>
+                        <input type="text" id="i-cname" list="c-list" onchange="autofillCustomer()" required>
+                        <datalist id="c-list"></datalist>
+                        <label>Mobile *</label><input type="tel" id="i-cmob" required>
+                    </div>
+                    <div>
+                        <label>Invoice Number</label><input type="text" id="i-num" readonly class="bg-gray-100 font-bold">
+                        <label>Date *</label><input type="date" id="i-date" required>
+                    </div>
+                </div>
+                <!-- Items -->
+                <div class="overflow-x-auto mb-4">
+                    <table class="w-[800px] mb-0">
+                        <thead><tr><th>Product Name</th><th>HSN</th><th>Qty</th><th>Rate</th><th>Total</th><th></th></tr></thead>
+                        <tbody id="i-items"></tbody>
+                    </table>
+                    <button type="button" class="btn text-sm mt-2" onclick="addInvRow()">+ Add Item</button>
+                    <datalist id="p-list"></datalist>
+                </div>
+                <div class="flex flex-col items-end">
+                    <div class="w-full md:w-1/3 bg-gray-50 p-4 rounded">
+                        <div class="flex justify-between mb-2"><span>Subtotal:</span><span id="i-sub">₹0</span></div>
+                        <div class="flex justify-between mb-2 items-center">
+                            <span>GST: <select id="i-gst" onchange="calcInv()" class="w-16 ml-2 p-1 m-0"><option value="0">0%</option><option value="5">5%</option><option value="12">12%</option><option value="18">18%</option></select></span>
+                            <span id="i-gst-amt">₹0</span>
+                        </div>
+                        <div class="flex justify-between font-bold text-xl pt-2 border-t"><span>Total:</span><span id="i-total">₹0</span></div>
+                    </div>
+                </div>
+                <div class="mt-4 border-t pt-4">
+                    <label>Payment Status</label>
+                    <select id="i-status" class="w-auto inline-block mr-4"><option>Paid</option><option>Pending</option><option>Partial</option></select>
+                    <button type="submit" class="btn px-8">Save Invoice</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- INVENTORY -->
+        <div id="view-inventory" class="view">
+            <h2 class="text-2xl font-bold mb-4 text-[#2d7a2d]">Stock & Inventory</h2>
+            <form class="card flex flex-wrap gap-2 items-end" onsubmit="saveProduct(event)">
+                <div><label>Name</label><input type="text" id="p-name" required></div>
+                <div><label>HSN</label><input type="text" id="p-hsn"></div>
+                <div><label>Unit</label><input type="text" id="p-unit" placeholder="kg/bag"></div>
+                <div><label>Current Stock</label><input type="number" id="p-stock" required></div>
+                <div><label>Min Level</label><input type="number" id="p-min" required></div>
+                <div><label>Rate (₹)</label><input type="number" id="p-rate" required></div>
+                <button type="submit" class="btn mb-3">Add Product</button>
+            </form>
+            <div class="card overflow-x-auto">
+                <table>
+                    <thead><tr><th>Product</th><th>HSN</th><th>Stock</th><th>Min</th><th>Rate</th><th>Action</th></tr></thead>
+                    <tbody id="p-table"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- CUSTOMERS -->
+        <div id="view-customers" class="view">
+            <h2 class="text-2xl font-bold mb-4 text-[#2d7a2d]">Customer Directory</h2>
+            <div class="card overflow-x-auto">
+                <table>
+                    <thead><tr><th>Name</th><th>Mobile</th><th>Total Spent</th><th>Delete</th></tr></thead>
+                    <tbody id="c-table"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ALL INVOICES -->
+        <div id="view-invoices" class="view">
+            <h2 class="text-2xl font-bold mb-4 text-[#2d7a2d]">All Invoices</h2>
+            <div class="card overflow-x-auto">
+                <table>
+                    <thead><tr><th>Inv No</th><th>Date</th><th>Customer</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead>
+                    <tbody id="inv-table"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- REPORTS -->
+        <div id="view-reports" class="view">
+            <h2 class="text-2xl font-bold mb-4 text-[#2d7a2d]">Analytics & Reports</h2>
+            <div class="card">
+                <h3>Monthly Sales (Last 6 Months)</h3>
+                <div class="chart" id="r-chart"></div>
+            </div>
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="card"><h3>Top Products</h3><ul id="r-top-prod" class="list-disc pl-5 mt-2"></ul></div>
+                <div class="card"><h3>Top Customers</h3><ul id="r-top-cust" class="list-disc pl-5 mt-2"></ul></div>
+            </div>
+        </div>
+
+        <!-- SETTINGS -->
+        <div id="view-settings" class="view max-w-2xl mx-auto">
+            <h2 class="text-2xl font-bold mb-4 text-[#2d7a2d]">Settings</h2>
+            <div class="card">
+                <h3 class="font-bold border-b pb-2 mb-2">Company Info</h3>
+                <label>Company Name</label><input type="text" id="s-cname">
+                <label>Tagline</label><input type="text" id="s-tag">
+                <label>GSTIN</label><input type="text" id="s-gst">
+                <label>PAN</label><input type="text" id="s-pan">
+                <label>Address</label><textarea id="s-addr"></textarea>
+                <label>Phone</label><input type="text" id="s-phone">
+                <label>Terms & Conditions</label><textarea id="s-terms" rows="3"></textarea>
+                <label>Upload Logo (max 100kb)</label><input type="file" id="s-logo-upload" accept="image/*" onchange="convertLogo()">
+                <div id="s-logo-preview" class="text-4xl my-2">🌿</div>
+                
+                <h3 class="font-bold border-b pb-2 mt-6 mb-2">Security</h3>
+                <label>Username</label><input type="text" id="s-user">
+                <label>Password</label><input type="password" id="s-pass">
+                <label>2FA PIN (4 digits)</label><input type="password" id="s-pin" maxlength="4">
+                
+                <button class="btn w-full mt-4" onclick="saveSettings()">Save Settings</button>
+            </div>
+            
+            <div class="card bg-red-50">
+                <h3 class="font-bold text-red-600 mb-2">Danger Zone / Backup</h3>
+                <button class="btn bg-blue-600 mb-2 mr-2" onclick="exportDB()">Export JSON Backup</button>
+                <button class="btn btn-red mb-2" onclick="clearDB()">Reset All Data</button>
+            </div>
+            
+            <div class="card h-64 overflow-y-auto">
+                <h3 class="font-bold mb-2">Login Activity</h3>
+                <ul id="s-logs" class="text-sm space-y-1"></ul>
+            </div>
+        </div>
+
+        <!-- PREVIEW/PRINT -->
+        <div id="view-preview" class="view pb-20">
+            <div class="flex gap-2 mb-4">
+                <button class="btn" onclick="nav('invoices')">Back</button>
+                <button class="btn bg-gray-700" onclick="printInv()">🖨️ Print</button>
+                <button class="btn bg-red-500" onclick="downloadPDF()">📄 PDF</button>
+                <button class="btn bg-[#25D366]" onclick="shareWA()">💬 WhatsApp</button>
+                <button class="btn bg-blue-500" onclick="shareSMS()">📱 SMS</button>
+            </div>
+            <!-- ACTUAL INVOICE TEMPLATE -->
+            <div id="print-area" class="print-box border sm:shadow-lg">
+                <div class="print-header items-end">
+                    <div>
+                        <div id="pr-logo" class="text-4xl mb-2">🌿</div>
+                        <h1 id="pr-cname" class="text-3xl font-black text-[#2d7a2d] uppercase m-0 leading-none">Greenearth Organic</h1>
+                        <p id="pr-tag" class="text-sm italic text-gray-600 mb-2 mt-1"></p>
+                        <p class="text-xs text-gray-700 m-0">GSTIN: <span id="pr-gst"></span> | PAN: <span id="pr-pan"></span></p>
+                        <p class="text-xs text-gray-700 m-0">Add: <span id="pr-addr"></span></p>
+                        <p class="text-xs text-gray-700 m-0">Ph: <span id="pr-phone"></span></p>
+                    </div>
+                    <div class="text-right">
+                        <h2 class="text-2xl font-bold uppercase mb-2">TAX INVOICE</h2>
+                        <p class="text-xs m-0">Inv No: <span id="pr-invnum" class="font-bold"></span></p>
+                        <p class="text-xs m-0 mb-2">Date: <span id="pr-invdate"></span></p>
+                        <span id="pr-status" class="badge bg-green">PAID</span>
+                    </div>
+                </div>
+                
+                <div class="mb-6 border border-gray-300 p-3 bg-gray-50 text-sm">
+                    <p class="font-bold text-gray-500 text-xs mb-1 uppercase">Bill To:</p>
+                    <p id="pr-custname" class="font-bold text-lg m-0"></p>
+                    <p class="text-sm m-0">Ph: <span id="pr-custmob"></span></p>
+                </div>
+                
+                <table class="text-sm w-full mb-6 border border-gray-400">
+                    <thead class="bg-gray-100 text-gray-700">
+                        <tr><th class="border border-gray-400 p-2">#</th><th class="border border-gray-400 p-2">Item Description</th><th class="border border-gray-400 p-2">HSN</th><th class="border border-gray-400 p-2 text-right">Qty</th><th class="border border-gray-400 p-2 text-right">Rate</th><th class="border border-gray-400 p-2 text-right">Amount</th></tr>
+                    </thead>
+                    <tbody id="pr-items"></tbody>
+                </table>
+                
+                <div class="flex justify-between items-start text-sm">
+                    <div class="w-1/2 pr-4 text-xs text-gray-600 whitespace-pre-line border-t pt-2">
+                        <b class="text-gray-900 block">Terms & Conditions:</b><span id="pr-terms"></span>
+                    </div>
+                    <div class="w-[200px] border border-gray-400 p-3 content-end">
+                        <div class="flex justify-between mb-1"><span>Subtotal:</span><b id="pr-sub"></b></div>
+                        <div class="flex justify-between mb-1"><span>GST (<span id="pr-gstpct"></span>%):</span><b id="pr-gstamt"></b></div>
+                        <div class="flex justify-between border-t border-gray-400 pt-2 mt-1 text-lg"><b>Total (₹):</b><b id="pr-total"></b></div>
+                    </div>
+                </div>
+                
+                <div class="mt-12 flex justify-between items-end border-t border-gray-200 pt-2 text-xs">
+                    <div class="text-gray-400 text-[10px]">System Generated Tax Invoice</div>
+                    <div class="text-right">
+                        <div class="h-10 border-b border-gray-300 w-32 mb-1 inline-block"></div>
+                        <p class="font-bold text-gray-700 m-0">Auth. Signatory</p>
+                        <p class="text-[10px] m-0" id="pr-signfor">For Greenearth Organic</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
+</div>
 
-    <!-- ============================================== -->
-    <!-- MAIN APP LAYOUT                                -->
-    <!-- ============================================== -->
-    <div id="appLayout" class="view hidden h-full flex flex-col no-print bg-gray-50">
-        
-        <!-- Navigation Bar -->
-        <nav class="bg-brand-900 shadow sm:border-t-4 border-accent-500">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex flex-col md:flex-row justify-between items-center py-4 gap-4">
-                    <div class="flex w-full md:w-auto justify-between items-center">
-                        <div>
-                            <h1 class="text-2xl font-bold text-white tracking-tight">Greenearth <span class="text-accent-500">Organic</span></h1>
-                            <p class="text-xs text-brand-100">Improving Agriculture, Improving Lives</p>
-                        </div>
-                    </div>
-                    <div class="flex flex-wrap justify-center items-center gap-2 md:gap-4">
-                        <button onclick="navigate('dashboard')" class="text-white hover:bg-brand-800 px-3 py-2 rounded-md font-medium text-sm transition">Dashboard</button>
-                        <button onclick="navigate('create')" class="bg-accent-500 text-brand-900 hover:bg-accent-400 px-3 py-2 rounded-md font-semibold text-sm shadow-sm transition">➕ New</button>
-                        <button onclick="navigate('settings')" class="text-brand-100 hover:text-white px-3 py-2 rounded-md font-medium text-sm transition">⚙️ Settings</button>
-                        <button onclick="logout()" class="text-red-400 hover:text-red-300 md:ml-2 px-3 py-2 text-sm font-medium transition">Logout</button>
-                    </div>
-                </div>
-            </div>
-        </nav>
+<script>
+/* ================= SYSTEM LOGIC ================= */
+const DB = {
+    settings: { cname: "Greenearth Organic", tag: "Improving Agriculture, Improving Lives", gst: "24AAAAA0000A1Z5", pan: "AAAAA0000A", addr: "Gujarat", phone: "+91 0000000000", terms: "1. Subject to Gujarat Jurisdiction.\n2. Goods once sold will not be returned.\n3. Payment due in 7 days.", logo: "🌿", user: "admin", pass: "greenearth123", pin: "1234" },
+    invoices: [], customers: [], inventory: [], logs: []
+};
 
-        <!-- Main Content Area -->
-        <main class="flex-1 overflow-y-auto w-full">
-            
-            <!-- Dashboard View -->
-            <div id="dashboardView" class="view active max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-                
-                <h2 class="text-2xl font-bold text-gray-900 mb-6">Business Overview</h2>
-                
-                <!-- Stats Row -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100 border-l-4 border-l-brand-600 flex items-center">
-                        <div class="p-3 rounded-full bg-brand-50 mr-4 text-brand-600">
-                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                        </div>
-                        <div>
-                            <p class="text-sm font-medium text-gray-500">Total Invoices</p>
-                            <p class="text-3xl font-bold text-gray-900" id="stat-count">0</p>
-                        </div>
-                    </div>
-                    
-                    <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100 border-l-4 border-l-accent-500 flex items-center">
-                        <div class="p-3 rounded-full bg-accent-50 mr-4 text-accent-600">
-                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        </div>
-                        <div>
-                            <p class="text-sm font-medium text-gray-500">Total Revenue</p>
-                            <p class="text-3xl font-bold text-gray-900" id="stat-revenue">₹0</p>
-                        </div>
-                    </div>
+// State
+let localDB = JSON.parse(localStorage.getItem('geo_db'));
+if(!localDB) { localDB = DB; saveData(); }
+// Ensure structural updates
+if(!localDB.settings.cname) localDB.settings = DB.settings;
+if(!localDB.logs) localDB.logs = [];
 
-                    <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100 border-l-4 border-l-blue-500 flex flex-col justify-center items-center cursor-pointer hover:bg-gray-50 transition" onclick="navigate('create')">
-                        <div class="text-blue-500 mb-2">
-                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-                        </div>
-                        <p class="text-lg font-bold text-blue-600">Generate New</p>
-                    </div>
-                </div>
+let activeInvId = null;
+let timer = null;
+let inactivityTimer = null;
+let timeLeft = 900; // 15 mins
 
-                <!-- Recent Table -->
-                <div class="bg-white shadow-sm border border-gray-100 rounded-xl overflow-hidden">
-                    <div class="px-6 py-5 border-b border-gray-200">
-                        <h3 class="text-lg font-bold text-gray-900">Recent Invoices</h3>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice No</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody class="bg-white divide-y divide-gray-200" id="invoiceTableBody">
-                                <!-- Populated dynamically -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+function saveData() { localStorage.setItem('geo_db', JSON.stringify(localDB)); }
 
-            <!-- Settings View -->
-            <div id="settingsView" class="view hidden max-w-3xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-                <div class="bg-white shadow-sm border border-gray-100 rounded-xl overflow-hidden p-6 mb-6">
-                    <h2 class="text-2xl font-bold text-gray-900 mb-4">Manage Products</h2>
-                    <p class="text-sm text-gray-500 mb-6">Add or remove products shown in the invoice dropdown menu.</p>
-                    
-                    <div class="flex gap-2 mb-6">
-                        <input type="text" id="newProductName" class="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-brand-500 focus:border-brand-500" placeholder="E.g. Super Neem Extract">
-                        <button type="button" onclick="addProduct()" class="px-4 py-2 bg-brand-600 text-white rounded-md font-medium hover:bg-brand-700">Add Product</button>
-                    </div>
+// -- AUTH -- 
+function checkAuth() {
+    clearTimeout(inactivityTimer); clearInterval(timer);
+    const mode = sessionStorage.getItem('auth_step');
+    if(mode === 'full') {
+        document.querySelectorAll('.view').forEach(e=>e.classList.remove('active'));
+        document.getElementById('app-layout').classList.add('active');
+        nav('dashboard');
+        startInactivity();
+    } else if(mode === 'pin') {
+        document.querySelectorAll('.view').forEach(e=>e.classList.remove('active'));
+        document.getElementById('view-pin').classList.add('active');
+    } else {
+        document.querySelectorAll('.view').forEach(e=>e.classList.remove('active'));
+        document.getElementById('view-login').classList.add('active');
+    }
+}
 
-                    <div class="border rounded-lg overflow-hidden">
-                        <ul id="settingsProductList" class="divide-y divide-gray-200">
-                            <!-- JS populated -->
-                        </ul>
-                    </div>
-                </div>
-            </div>
+function doLogin(e) {
+    e.preventDefault();
+    if(document.getElementById('l-user').value === localDB.settings.user && document.getElementById('l-pass').value === localDB.settings.pass) {
+        logActivity("Password Login OK");
+        sessionStorage.setItem('auth_step', 'pin');
+        checkAuth();
+    } else { alert("Invalid Credentials"); logActivity("Failed Login Attempt"); }
+}
 
-            <!-- Create Invoice View -->
-            <div id="createView" class="view max-w-5xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-                
-                <div class="bg-white shadow-lg rounded-2xl overflow-hidden border border-gray-100">
-                    <div class="bg-gradient-to-r from-brand-900 to-brand-700 px-6 py-4 flex justify-between items-center text-white">
-                        <h2 class="text-xl font-bold">Generate Tax Invoice</h2>
-                        <span id="invModeText" class="px-3 py-1 bg-white bg-opacity-20 rounded-full text-sm">New</span>
-                    </div>
+function doPin(e) {
+    e.preventDefault();
+    if(document.getElementById('l-pin').value === localDB.settings.pin) {
+        sessionStorage.setItem('auth_step', 'full');
+        document.getElementById('l-pin').value = '';
+        checkAuth();
+    } else { alert("Invalid PIN"); }
+}
 
-                    <form id="invoiceForm" class="p-8">
-                        
-                        <!-- Top Info -->
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8 pb-8 border-b border-gray-100">
-                            <!-- Left: Invoice Details -->
-                            <div class="space-y-4">
-                                <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wide">Document Details</h3>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Invoice Number <span class="text-red-500">*</span></label>
-                                    <input type="text" id="invNum" required class="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-md font-mono text-brand-900 font-bold focus:ring-brand-500 focus:border-brand-500">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Date <span class="text-red-500">*</span></label>
-                                    <input type="date" id="invDate" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-brand-500 focus:border-brand-500">
-                                </div>
-                            </div>
+function doLogout() {
+    sessionStorage.removeItem('auth_step');
+    logActivity("Logged out");
+    checkAuth();
+}
 
-                            <!-- Right: Customer Details -->
-                            <div class="space-y-4">
-                                <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wide">Bill To (Customer)</h3>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Full Name <span class="text-red-500">*</span></label>
-                                    <input type="text" id="cName" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-brand-500 focus:border-brand-500" placeholder="Ramesh Bhai">
-                                </div>
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">Mobile No <span class="text-red-500">*</span></label>
-                                        <input type="tel" id="cMobile" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-brand-500 focus:border-brand-500" placeholder="9876543210">
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">Email (Optional)</label>
-                                        <input type="email" id="cEmail" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-brand-500 focus:border-brand-500" placeholder="abc@email.com">
-                                    </div>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Village / Address</label>
-                                    <input type="text" id="cAddress" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-brand-500 focus:border-brand-500" placeholder="Enter full address">
-                                </div>
-                            </div>
-                        </div>
+function logActivity(act) {
+    localDB.logs.unshift({ date: new Date().toLocaleString(), action: act, d: navigator.userAgent.substring(0,30) });
+    if(localDB.logs.length > 20) localDB.logs.pop();
+    saveData();
+}
 
-                        <!-- Products Section -->
-                        <div class="mb-8 overflow-x-auto">
-                            <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wide mb-4">Products / Items</h3>
-                            <div class="min-w-[700px]">
-                                <div class="grid grid-cols-12 gap-3 mb-2 px-2 text-xs font-semibold text-gray-500 uppercase">
-                                    <div class="col-span-1 text-center">#</div>
-                                    <div class="col-span-5">Description</div>
-                                    <div class="col-span-2 text-right">Qty</div>
-                                    <div class="col-span-2 text-right">Rate (₹)</div>
-                                    <div class="col-span-2 text-right pr-4">Amount</div>
-                                </div>
-                                
-                                <div id="itemsContainer" class="space-y-3 relative">
-                                    <!-- Dynamic rows -->
-                                    <datalist id="productList">
-                                        <!-- Populated via JS -->
-                                    </datalist>
-                                </div>
-
-                                <div class="mt-4 px-2">
-                                    <button type="button" onclick="addItemRow()" class="text-brand-600 font-medium text-sm hover:text-brand-800 flex items-center transition bg-brand-50 px-3 py-1.5 rounded-full">
-                                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-                                        Add Line Item
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Totals Section -->
-                        <div class="flex flex-col md:flex-row justify-between items-start border-t border-gray-100 pt-8 mt-8">
-                            
-                            <div class="w-full md:w-1/2 mb-6 md:mb-0 pr-0 md:pr-8">
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Notes / Terms</label>
-                                <textarea id="invNotes" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-brand-500 focus:border-brand-500 text-sm text-gray-600" placeholder="Goods once sold will not be returned..."></textarea>
-                            </div>
-
-                            <div class="w-full md:w-80 bg-gray-50 p-5 rounded-xl border border-gray-200">
-                                <div class="flex justify-between items-center mb-3">
-                                    <span class="text-sm text-gray-600">Subtotal</span>
-                                    <span class="font-medium text-gray-900" id="calcSub">₹0.00</span>
-                                </div>
-                                <div class="flex justify-between items-center mb-3">
-                                    <span class="text-sm text-gray-600 flex items-center">
-                                        GST 
-                                        <select id="invGst" onchange="calculate()" class="ml-2 bg-white border border-gray-300 rounded text-xs px-1 py-0.5 outline-none">
-                                            <option value="0">0%</option>
-                                            <option value="5">5%</option>
-                                            <option value="12">12%</option>
-                                            <option value="18">18%</option>
-                                        </select>
-                                    </span>
-                                    <span class="font-medium text-gray-900" id="calcGstAmount">₹0.00</span>
-                                </div>
-                                <div class="flex justify-between items-center mt-4 pt-4 border-t border-gray-300">
-                                    <span class="text-base font-bold text-gray-900">Grand Total</span>
-                                    <span class="text-2xl font-bold text-brand-700" id="calcTotal">₹0.00</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Save Actions -->
-                        <div class="mt-10 flex justify-end gap-4 border-t border-gray-100 pt-6">
-                            <button type="button" onclick="navigate('dashboard')" class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition">Cancel</button>
-                            <button type="button" onclick="saveAndPreview()" class="px-8 py-3 bg-brand-600 hover:bg-brand-700 text-white rounded-lg font-bold shadow-lg shadow-brand-500/30 transition transform focus:outline-none">Save & Preview Invoice</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Preview / Actions View -->
-            <div id="previewView" class="view max-w-5xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-                
-                <div class="mb-6 flex items-center justify-between">
-                    <button onclick="navigate('dashboard')" class="text-gray-600 hover:text-gray-900 flex items-center">
-                        <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-                        Back to Dashboard
-                    </button>
-                    <div class="text-sm font-medium text-gray-500" id="previewStatus"></div>
-                </div>
-
-                <!-- Action Panel (Owner specific tools) -->
-                <div class="bg-white p-5 rounded-xl shadow-md border border-gray-200 mb-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                    
-                    <button onclick="waShare()" class="flex flex-col items-center justify-center p-4 bg-green-50 rounded-lg border border-green-100 hover:bg-green-100 transition group cursor-pointer">
-                        <div class="w-12 h-12 bg-[#25D366] rounded-full flex items-center justify-center text-white mb-2 group-hover:scale-110 transition">
-                            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 16 16"><path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.933 7.933 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.898 7.898 0 0 0 13.6 2.326zM7.994 14.521a6.573 6.573 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.557 6.557 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592zm3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.729.729 0 0 0-.529.247c-.182.198-.691.677-.691 1.654 0 .977.71 1.916.81 2.049.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232z"/></svg>
-                        </div>
-                        <span class="font-semibold text-green-800">Send WhatsApp</span>
-                    </button>
-
-                    <button onclick="emailShare()" class="flex flex-col items-center justify-center p-4 bg-blue-50 rounded-lg border border-blue-100 hover:bg-blue-100 transition group cursor-pointer">
-                        <div class="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center text-white mb-2 group-hover:scale-110 transition">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-                        </div>
-                        <span class="font-semibold text-blue-800">Email to Cust</span>
-                    </button>
-
-                    <button onclick="generatePDF()" class="flex flex-col items-center justify-center p-4 bg-red-50 rounded-lg border border-red-100 hover:bg-red-100 transition group cursor-pointer">
-                        <div class="w-12 h-12 bg-red-500 rounded-full flex items-center justify-center text-white mb-2 group-hover:scale-110 transition">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                        </div>
-                        <span class="font-semibold text-red-800">Download PDF</span>
-                    </button>
-
-                    <button onclick="window.print()" class="flex flex-col items-center justify-center p-4 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition group cursor-pointer">
-                        <div class="w-12 h-12 bg-gray-700 rounded-full flex items-center justify-center text-white mb-2 group-hover:scale-110 transition">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
-                        </div>
-                        <span class="font-semibold text-gray-800">Print Receipt</span>
-                    </button>
-
-                </div>
-
-                <!-- Actual Print Template Area -->
-                <div class="bg-gray-400 p-2 sm:p-8 rounded-lg flex justify-center">
-                    
-                    <!-- Paper A4 Container -->
-                    <div id="print-container" class="bg-white w-full max-w-[210mm] min-h-[297mm] shadow-2xl mx-auto p-[20mm] text-black text-sm relative box-border">
-                        
-                        <!-- Print header -->
-                        <div class="flex justify-between items-start border-b-2 border-brand-900 pb-6 mb-6">
-                            <div>
-                                <h1 class="text-4xl font-black text-brand-900 tracking-tighter uppercase m-0 leading-none">Greenearth</h1>
-                                <p class="text-xl font-bold tracking-widest text-accent-500 uppercase m-0">Organic</p>
-                                <p class="text-gray-500 mt-2 italic">Improving Agriculture, Improving Lives</p>
-                            </div>
-                            <div class="text-right">
-                                <h2 class="text-2xl font-bold text-gray-800 uppercase tracking-wider mb-2">TAX INVOICE</h2>
-                                <p class="font-medium text-gray-500">Invoice No: <span id="p-invNum" class="text-gray-900 font-bold ml-1"></span></p>
-                                <p class="font-medium text-gray-500">Date: <span id="p-date" class="text-gray-900 ml-1"></span></p>
-                            </div>
-                        </div>
-
-                        <!-- Info Grid -->
-                        <div class="grid grid-cols-2 gap-8 mb-8">
-                            <div>
-                                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Billed To:</p>
-                                <p class="font-bold text-lg text-gray-900" id="p-name"></p>
-                                <p class="text-gray-700 mt-1">Ph: <span id="p-mobile"></span></p>
-                                <p class="text-gray-700" id="p-email"></p>
-                                <p class="text-gray-700 max-w-xs mt-1" id="p-address"></p>
-                            </div>
-                            <div class="text-right">
-                                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Auth. Signatory</p>
-                                <div class="h-16 w-32 border border-dashed border-gray-300 ml-auto flex items-center justify-center text-xs text-gray-400 italic mb-1 rounded">Sign Here</div>
-                                <p class="text-gray-600 font-medium">For Greenearth Organic</p>
-                            </div>
-                        </div>
-
-                        <!-- Table -->
-                        <table class="w-full mb-8 border-collapse">
-                            <thead>
-                                <tr class="bg-brand-50 text-brand-900 border-t-2 border-b-2 border-brand-900">
-                                    <th class="py-3 px-4 text-left font-bold w-12 text-center">#</th>
-                                    <th class="py-3 px-4 text-left font-bold">Item Description</th>
-                                    <th class="py-3 px-4 text-right font-bold w-20">Qty</th>
-                                    <th class="py-3 px-4 text-right font-bold w-28">Rate (₹)</th>
-                                    <th class="py-3 px-4 text-right font-bold w-32">Amount (₹)</th>
-                                </tr>
-                            </thead>
-                            <tbody id="p-items" class="text-gray-800">
-                                <!-- JS Injected -->
-                            </tbody>
-                        </table>
-
-                        <!-- Print Totals -->
-                        <div class="flex justify-between items-start mt-8 page-break-inside-avoid">
-                            <div class="w-1/2 pr-8 text-xs text-gray-500 border border-gray-200 p-4 rounded bg-gray-50">
-                                <span class="font-bold text-gray-700 block mb-1">Terms & Conditions:</span>
-                                <span id="p-notes">1. Subject to Gujarat Jurisdiction.<br>2. Goods once sold will not be returned or exchanged.</span>
-                            </div>
-                            
-                            <div class="w-72">
-                                <div class="flex justify-between py-2 border-b border-gray-200">
-                                    <span class="font-medium text-gray-600">Subtotal</span>
-                                    <span class="font-bold" id="p-sub"></span>
-                                </div>
-                                <div class="flex justify-between py-2 border-b border-gray-200">
-                                    <span class="font-medium text-gray-600">Tax [GST <span id="p-gstPct"></span>%]</span>
-                                    <span class="font-bold" id="p-gstAmt"></span>
-                                </div>
-                                <div class="flex justify-between py-4 text-xl border-b-2 border-brand-900">
-                                    <span class="font-bold text-gray-900 uppercase">Grand Total</span>
-                                    <span class="font-black text-brand-900" id="p-total"></span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Footer -->
-                        <div class="absolute bottom-[20mm] left-[20mm] right-[20mm] text-center text-xs text-gray-400 border-t border-gray-200 pt-4 pb-4">
-                            System Generated Tax Invoice. This document does not require physical signature if sent digitally.
-                        </div>
-
-                    </div>
-                </div>
-            </div>
-
-        </main>
-    </div>
-
-    <!-- ============================================== -->
-    <!-- LOGIC SYSTEM (JS)                              -->
-    <!-- ============================================== -->
-    <script>
-        // Init EmailJS Config - using a dummy public key for safety
-        // Owner must replace this with their actual key from EmailJS dashboard
-        setTimeout(function() {
-            try {
-                if(typeof emailjs !== 'undefined') {
-                    emailjs.init("YOUR_EMAILJS_PUBLIC_KEY");
-                }
-            } catch(e) { console.log("EmailJS init note: Add keys for email service."); }
-        }, 1000);
-
-        // --- AUTH & STATE ---
-        const DB_KEY = 'greenearth_owner_db';
-        let currentEditingId = null;
-
-        window.onload = function() {
-            if(sessionStorage.getItem('owner_auth') === 'true') {
-                showApp();
-            }
-        };
-
-        function handleLogin(e) {
-            e.preventDefault();
-            const u = document.getElementById('username').value.trim().toLowerCase();
-            const p = document.getElementById('password').value.trim();
-            // Secure Owner Login
-            if(u === 'admin' && p === '1234') {
-                sessionStorage.setItem('owner_auth', 'true');
-                showApp();
-            } else {
-                alert("ACCESS DENIED. Invalid Username or Password.\nHint: Username = admin | Password = 1234");
-            }
+function startInactivity() {
+    timeLeft = 900;
+    document.getElementById('timeout-warn').classList.add('hidden');
+    clearInterval(timer);
+    timer = setInterval(() => {
+        timeLeft--;
+        if(timeLeft <= 120 && timeLeft > 0) {
+            document.getElementById('timeout-warn').classList.remove('hidden');
+            document.getElementById('tout-sec').innerText = timeLeft;
+        } else if(timeLeft <= 0) {
+            doLogout();
         }
+    }, 1000);
+}
 
-        function logout() {
-            sessionStorage.removeItem('owner_auth');
-            document.getElementById('appLayout').classList.remove('active');
-            setTimeout(() => {
-                document.getElementById('appLayout').classList.add('hidden');
-                document.getElementById('loginView').classList.add('active');
-            }, 300);
-        }
+// Reset timer on activity
+document.addEventListener('click', () => { if(sessionStorage.getItem('auth_step')==='full') startInactivity(); });
+document.addEventListener('keypress', () => { if(sessionStorage.getItem('auth_step')==='full') startInactivity(); });
 
-        function showApp() {
-            document.getElementById('loginView').classList.remove('active');
-            document.getElementById('appLayout').classList.remove('hidden');
-            setTimeout(() => document.getElementById('appLayout').classList.add('active'), 50);
-            navigate('dashboard');
-        }
+// -- ROUTER --
+function nav(page) {
+    document.querySelectorAll('#main-content > .view').forEach(e => e.style.display = 'none');
+    document.getElementById(`view-${page}`).style.display = 'block';
+    if(page==='dashboard') renderDash();
+    if(page==='create') initCreate();
+    if(page==='inventory') renderInv();
+    if(page==='customers') renderCust();
+    if(page==='invoices') renderAllInv();
+    if(page==='reports') renderReports();
+    if(page==='settings') initSettings();
+}
 
-        // --- NAVIGATION & ROUTING ---
-        function navigate(route) {
-            // Hide all sub-views
-            ['dashboardView', 'createView', 'previewView', 'settingsView'].forEach(id => {
-                document.getElementById(id).classList.remove('active');
-                setTimeout(() => document.getElementById(id).style.display = 'none', 10);
-            });
+// -- HELPERS --
+const fCur = (a) => '₹'+parseFloat(a).toLocaleString('en-IN',{minimumFractionDigits:2});
 
-            setTimeout(() => {
-                if(route === 'dashboard') {
-                    renderDashboard();
-                    document.getElementById('dashboardView').style.display = 'block';
-                    setTimeout(() => document.getElementById('dashboardView').classList.add('active'), 10);
-                } 
-                else if (route === 'create') {
-                    prepNewInvoice();
-                    document.getElementById('createView').style.display = 'block';
-                    setTimeout(() => document.getElementById('createView').classList.add('active'), 10);
-                }
-                else if (route === 'preview') {
-                    document.getElementById('previewView').style.display = 'block';
-                    setTimeout(() => document.getElementById('previewView').classList.add('active'), 10);
-                }
-                else if (route === 'settings') {
-                    renderSettings();
-                    document.getElementById('settingsView').style.display = 'block';
-                    setTimeout(() => document.getElementById('settingsView').classList.add('active'), 10);
-                }
-            }, 20);
-        }
+// -- DASHBOARD --
+function renderDash() {
+    let rev = 0, pt = 0, pnd = 0, mon = 0;
+    const isThisMonth = d => new Date(d).getMonth() === new Date().getMonth() && new Date(d).getFullYear() === new Date().getFullYear();
+    
+    localDB.invoices.forEach(i => {
+        const amt = parseFloat(i.total);
+        rev += amt;
+        if(i.status === 'Paid') pt += amt;
+        if(i.status === 'Partial') { /* Simplified: partial assumes 50% paid for stats if no explicit tracking. We'll track fully pending here */ pnd += amt; }
+        if(i.status === 'Pending') pnd += amt;
+        if(isThisMonth(i.date)) mon += amt;
+    });
 
-        // --- DATABASE OPS ---
-        function getData() {
-            return JSON.parse(localStorage.getItem(DB_KEY)) || [];
-        }
-        function saveData(data) {
-            localStorage.setItem(DB_KEY, JSON.stringify(data));
-        }
+    document.getElementById('d-rev').innerText = fCur(rev);
+    document.getElementById('d-paid').innerText = fCur(pt);
+    document.getElementById('d-pend').innerText = fCur(pnd);
+    document.getElementById('d-month').innerText = fCur(mon);
 
-        // --- SETTINGS (PRODUCTS) ---
-        const PROD_KEY = 'greenearth_products';
-        const defaultProducts = ['Organic Manure (Khatar)', 'Bio Fertilizer', 'Compost', 'Neem Cake'];
+    const rList = document.getElementById('d-recent-list');
+    rList.innerHTML = '';
+    [...localDB.invoices].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,5).forEach(i => {
+        rList.innerHTML += `<tr><td>${i.id}</td><td>${new Date(i.date).toLocaleDateString()}</td><td>${i.cname}</td><td>${fCur(i.total)}</td><td>${i.status}</td></tr>`;
+    });
+}
 
-        function getProducts() {
-            return JSON.parse(localStorage.getItem(PROD_KEY)) || defaultProducts;
-        }
+// -- CREATION --
+function initCreate() {
+    document.getElementById('frm-inv').reset();
+    document.getElementById('i-date').valueAsDate = new Date();
+    const yr = new Date().getFullYear();
+    document.getElementById('i-num').value = `GEO-${yr}-${String(localDB.invoices.length+1).padStart(3,'0')}`;
+    document.getElementById('i-items').innerHTML='';
+    addInvRow();
+    
+    const cDl = document.getElementById('c-list'); cDl.innerHTML='';
+    localDB.customers.forEach(c => cDl.innerHTML += `<option value="${c.name}">`);
+    const pDl = document.getElementById('p-list'); pDl.innerHTML='';
+    localDB.inventory.forEach(p => pDl.innerHTML += `<option value="${p.name}">`);
+    calcInv();
+}
 
-        function renderSettings() {
-            const list = document.getElementById('settingsProductList');
-            list.innerHTML = '';
-            getProducts().forEach((p, idx) => {
-                list.innerHTML += `<li class="px-4 py-3 flex justify-between items-center hover:bg-gray-50">
-                    <span class="text-gray-800 font-medium">${p}</span>
-                    <button type="button" onclick="removeProduct(${idx})" class="text-red-500 hover:text-red-700 text-sm font-medium">Remove</button>
-                </li>`;
-            });
-            updateDataList();
-        }
+function addInvRow() {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td><input type="text" class="ir-name" list="p-list" onchange="autofillProd(this)" required></td>
+    <td><input type="text" class="ir-hsn"></td>
+    <td><input type="number" class="ir-qty" value="1" min="1" oninput="calcInv()" required></td>
+    <td><input type="number" class="ir-rate" value="0" min="0" oninput="calcInv()" required></td>
+    <td><input type="text" class="ir-amt" readonly></td>
+    <td><button type="button" class="text-red-500" onclick="this.parentElement.parentElement.remove(); calcInv()">X</button></td>`;
+    document.getElementById('i-items').appendChild(tr);
+}
 
-        function addProduct() {
-            const val = document.getElementById('newProductName').value.trim();
-            if(!val) return;
-            const prods = getProducts();
-            if(!prods.includes(val)) {
-                prods.push(val);
-                localStorage.setItem(PROD_KEY, JSON.stringify(prods));
-            }
-            document.getElementById('newProductName').value = '';
-            renderSettings();
-        }
+function autofillCustomer() {
+    const c = localDB.customers.find(x => x.name === document.getElementById('i-cname').value);
+    if(c) document.getElementById('i-cmob').value = c.mobile;
+}
+function autofillProd(sel) {
+    const tr = sel.closest('tr');
+    const p = localDB.inventory.find(x => x.name === sel.value);
+    if(p) {
+        tr.querySelector('.ir-hsn').value = p.hsn;
+        tr.querySelector('.ir-rate').value = p.rate;
+        calcInv();
+    }
+}
 
-        function removeProduct(idx) {
-            let prods = getProducts();
-            prods.splice(idx, 1);
-            localStorage.setItem(PROD_KEY, JSON.stringify(prods));
-            renderSettings();
-        }
+function calcInv() {
+    let sub = 0;
+    document.querySelectorAll('#i-items tr').forEach(tr => {
+        const q = parseFloat(tr.querySelector('.ir-qty').value)||0;
+        const r = parseFloat(tr.querySelector('.ir-rate').value)||0;
+        tr.querySelector('.ir-amt').value = (q*r).toFixed(2);
+        sub += q*r;
+    });
+    const gstPct = parseFloat(document.getElementById('i-gst').value)||0;
+    const gstArr = (sub * gstPct)/100;
+    document.getElementById('i-sub').innerText = fCur(sub);
+    document.getElementById('i-gst-amt').innerText = fCur(gstArr);
+    document.getElementById('i-total').innerText = fCur(sub+gstArr);
+    return { sub, gstPct, gstArr, tot: sub+gstArr };
+}
 
-        function updateDataList() {
-            const dl = document.getElementById('productList');
-            if(!dl) return;
-            dl.innerHTML = '';
-            getProducts().forEach(p => {
-                const opt = document.createElement('option');
-                opt.value = p;
-                dl.appendChild(opt);
-            });
-        }
-        
-        setTimeout(updateDataList, 100);
+function saveInvoice(e) {
+    e.preventDefault();
+    const items = [];
+    document.querySelectorAll('#i-items tr').forEach(tr => {
+        items.push({
+            n: tr.querySelector('.ir-name').value,
+            h: tr.querySelector('.ir-hsn').value,
+            q: parseFloat(tr.querySelector('.ir-qty').value),
+            r: parseFloat(tr.querySelector('.ir-rate').value),
+            a: parseFloat(tr.querySelector('.ir-amt').value)
+        });
+        // Deduct Stock
+        const px = localDB.inventory.find(x => x.name === tr.querySelector('.ir-name').value);
+        if(px) px.stock -= parseFloat(tr.querySelector('.ir-qty').value);
+    });
+    
+    // Save customer if new
+    const cname = document.getElementById('i-cname').value;
+    const cmob = document.getElementById('i-cmob').value;
+    if(!localDB.customers.find(c => c.name === cname)) {
+        localDB.customers.push({name: cname, mobile: cmob, email: '', address: ''});
+    }
+    
+    const calcs = calcInv();
+    const inv = {
+        id: document.getElementById('i-num').value,
+        date: document.getElementById('i-date').value,
+        cname, cmob, items, status: document.getElementById('i-status').value,
+        sub: calcs.sub, gstPct: calcs.gstPct, gstAmt: calcs.gstArr, total: calcs.tot
+    };
+    
+    localDB.invoices.push(inv);
+    saveData();
+    viewPreview(inv.id);
+}
 
-        // --- DASHBOARD ---
-        function renderDashboard() {
-            const data = getData();
-            document.getElementById('stat-count').innerText = data.length;
-            
-            const totalRec = data.reduce((acc, curr) => acc + parseFloat(curr.total), 0);
-            document.getElementById('stat-revenue').innerText = '₹' + totalRec.toLocaleString('en-IN', {minimumFractionDigits: 2});
+// -- ALL INVOICES --
+function renderAllInv() {
+    const tb = document.getElementById('inv-table'); tb.innerHTML='';
+    localDB.invoices.slice().reverse().forEach(i => {
+        tb.innerHTML += `<tr><td>${i.id}</td><td>${new Date(i.date).toLocaleDateString()}</td><td>${i.cname}</td><td>${fCur(i.total)}</td>
+        <td><span class="badge ${i.status==='Paid'?'bg-green':'bg-yellow'}">${i.status}</span></td>
+        <td><button onclick="viewPreview('${i.id}')" class="text-blue-500 underline text-sm">Open</button>
+        ${i.status !== 'Paid' ? ` | <button onclick="markPaid('${i.id}')" class="text-green-500 text-sm">Mark Paid</button>`:''}
+        </td></tr>`;
+    });
+}
+function markPaid(id) {
+    const x = localDB.invoices.find(i=>i.id===id); if(x) { x.status = 'Paid'; saveData(); renderAllInv(); }
+}
 
-            const tbody = document.getElementById('invoiceTableBody');
-            tbody.innerHTML = '';
+// -- INVENTORY & CUST --
+function saveProduct(e) {
+    e.preventDefault();
+    localDB.inventory.push({
+        name: document.getElementById('p-name').value, hsn: document.getElementById('p-hsn').value,
+        unit: document.getElementById('p-unit').value, stock: parseInt(document.getElementById('p-stock').value),
+        min: parseInt(document.getElementById('p-min').value), rate: parseFloat(document.getElementById('p-rate').value)
+    });
+    saveData();
+    e.target.reset(); renderInv();
+}
+function renderInv() {
+    const tb = document.getElementById('p-table'); tb.innerHTML='';
+    localDB.inventory.forEach((p,idx) => {
+        const pClass = p.stock <= p.min ? 'bg-red-100 text-red-800' : '';
+        tb.innerHTML += `<tr class="${pClass}"><td>${p.name}</td><td>${p.hsn}</td><td>${p.stock} ${p.unit}</td><td>${p.min}</td><td>₹${p.rate}</td>
+        <td><button class="text-red-500" onclick="delProd(${idx})">Del</button></td></tr>`;
+    });
+}
+function delProd(idx) { if(confirm("Delete item?")) { localDB.inventory.splice(idx,1); saveData(); renderInv(); } }
 
-            // Sort Descending by Date
-            const sorted = [...data].sort((a,b) => new Date(b.date) - new Date(a.date));
+function renderCust() {
+    const tb = document.getElementById('c-table'); tb.innerHTML='';
+    localDB.customers.forEach((c,idx) => {
+        let sp = localDB.invoices.reduce((acc,i)=>i.cname===c.name?acc+i.total:acc,0);
+        tb.innerHTML += `<tr><td>${c.name}</td><td>${c.mobile}</td><td>${fCur(sp)}</td><td><button class="text-red-500" onclick="delCust(${idx})">Del</button></td></tr>`;
+    });
+}
+function delCust(idx) { if(confirm("Delete customer?")) { localDB.customers.splice(idx,1); saveData(); renderCust(); } }
 
-            sorted.forEach(inv => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-brand-900">${inv.id}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${new Date(inv.date).toLocaleDateString()}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">${inv.customerName}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">₹${parseFloat(inv.total).toLocaleString('en-IN')}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                        <button onclick="viewInvoice('${inv.id}')" class="text-brand-600 hover:text-brand-900">View/Print</button>
-                        <span class="text-gray-300">|</span>
-                        <button onclick="deleteInvoice('${inv.id}')" class="text-red-500 hover:text-red-700">Del</button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
+// -- REPORTS --
+function renderReports() {
+    // Pure CSS Chart for last 6 months
+    const ch = document.getElementById('r-chart'); ch.innerHTML = '';
+    const mths = [...Array(6)].map((_,i) => {
+        let d = new Date(); d.setMonth(d.getMonth()-i); return {m:d.getMonth(), y:d.getFullYear(), l:d.toLocaleString('default',{month:'short'})};
+    }).reverse();
+    
+    let max = 1;
+    let dataMap = mths.map(m => {
+        let s = localDB.invoices.filter(i=>{let id=new Date(i.date); return id.getMonth()===m.m&&id.getFullYear()===m.y}).reduce((a,c)=>a+c.total,0);
+        if(s>max) max=s; return {l:m.l, s};
+    });
+    
+    dataMap.forEach(d => {
+        let hpct = (d.s/max)*100;
+        ch.innerHTML += `<div class="bar" style="height:${Math.max(hpct,5)}%">${Math.round(d.s/1000)}k<br>${d.l}</div>`;
+    });
+}
 
-        function deleteInvoice(id) {
-            if(confirm('Are you sure you want to permanently delete Invoice ' + id + '?')) {
-                let data = getData();
-                data = data.filter(i => i.id !== id);
-                saveData(data);
-                renderDashboard();
-            }
-        }
+// -- SETTINGS --
+function initSettings() {
+    ['cname','tag','gst','pan','addr','phone','terms','user','pass','pin'].forEach(k => {
+        if(document.getElementById('s-'+k)) document.getElementById('s-'+k).value = localDB.settings[k];
+    });
+    document.getElementById('s-logo-preview').innerHTML = localDB.settings.logo || '🌿';
+    
+    // Logs
+    const lg = document.getElementById('s-logs'); lg.innerHTML='';
+    localDB.logs.forEach(l => lg.innerHTML += `<li><b>${l.date}</b>: ${l.action} <span class="text-gray-400">(${l.d})</span></li>`);
+}
+function convertLogo() {
+    const file = document.getElementById('s-logo-upload').files[0];
+    if(!file) return;
+    const r = new FileReader(); r.onload = e => { localDB.settings.logo = `<img src="${e.target.result}" style="max-height:40px">`; document.getElementById('s-logo-preview').innerHTML = localDB.settings.logo; }; r.readAsDataURL(file);
+}
+function saveSettings() {
+    ['cname','tag','gst','pan','addr','phone','terms','user','pass','pin'].forEach(k => {
+        localDB.settings[k] = document.getElementById('s-'+k).value;
+    });
+    saveData(); alert("Settings Saved");
+}
+function exportDB() {
+    const b = new Blob([JSON.stringify(localDB)], {type: 'application/json'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'greenearth_backup.json'; a.click();
+}
+function clearDB() {
+    if(prompt("Type 'DELETE' to erase all data") === 'DELETE') { localStorage.removeItem('geo_db'); location.reload(); }
+}
 
-        // --- INVOICE CREATION ---
-        function prepNewInvoice() {
-            document.getElementById('invoiceForm').reset();
-            const data = getData();
-            const year = new Date().getFullYear().toString().substr(-2);
-            // Sequential generation securely
-            const seq = String(data.length + 1).padStart(4, '0');
-            document.getElementById('invNum').value = `GEO-${year}-${seq}`;
-            document.getElementById('invDate').valueAsDate = new Date();
-            
-            document.getElementById('itemsContainer').innerHTML = '';
-            addItemRow(); // add 1 blank line
-            calculate();
-            currentEditingId = null;
-        }
+// -- PREVIEW & EXPORT --
+function viewPreview(id) {
+    activeInvId = id;
+    const inv = localDB.invoices.find(i=>i.id===id);
+    const s = localDB.settings;
+    
+    document.getElementById('pr-logo').innerHTML = s.logo || '🌿';
+    document.getElementById('pr-cname').innerText = s.cname;
+    document.getElementById('pr-tag').innerText = s.tag;
+    document.getElementById('pr-gst').innerText = s.gst;
+    document.getElementById('pr-pan').innerText = s.pan;
+    document.getElementById('pr-addr').innerText = s.addr;
+    document.getElementById('pr-phone').innerText = s.phone;
+    
+    document.getElementById('pr-invnum').innerText = inv.id;
+    document.getElementById('pr-invdate').innerText = new Date(inv.date).toLocaleDateString();
+    document.getElementById('pr-status').innerText = inv.status;
+    document.getElementById('pr-status').className = `badge ${inv.status==='Paid'?'bg-green':'bg-yellow'}`;
+    
+    document.getElementById('pr-custname').innerText = inv.cname;
+    document.getElementById('pr-custmob').innerText = inv.cmob;
+    
+    const it = document.getElementById('pr-items'); it.innerHTML = '';
+    inv.items.forEach((i,x) => {
+        it.innerHTML += `<tr><td class="border border-gray-400 p-2">${x+1}</td><td class="border border-gray-400 p-2">${i.n}</td><td class="border border-gray-400 p-2">${i.h}</td><td class="border border-gray-400 p-2 text-right">${i.q}</td><td class="border border-gray-400 p-2 text-right">${i.r}</td><td class="border border-gray-400 p-2 text-right">${i.a.toFixed(2)}</td></tr>`;
+    });
+    
+    document.getElementById('pr-sub').innerText = fCur(inv.sub);
+    document.getElementById('pr-gstpct').innerText = inv.gstPct;
+    document.getElementById('pr-gstamt').innerText = fCur(inv.gstAmt);
+    document.getElementById('pr-total').innerText = fCur(inv.total);
+    document.getElementById('pr-terms').innerText = document.getElementById('s-terms').value || s.terms;
+    document.getElementById('pr-signfor').innerText = `For ${s.cname}`;
+    
+    nav('preview');
+}
 
-        function addItemRow() {
-            const cont = document.getElementById('itemsContainer');
-            const rowCount = cont.children.length + 1;
-            
-            const div = document.createElement('div');
-            div.className = "item-row grid grid-cols-12 gap-3 items-center group relative";
-            div.innerHTML = `
-                <div class="col-span-1 text-center text-sm font-bold text-gray-400 bg-gray-50 py-2 rounded">${rowCount}</div>
-                <div class="col-span-5">
-                    <input type="text" class="i-name w-full px-3 py-2 border border-gray-300 rounded focus:border-brand-500 outline-none" placeholder="Item Name" list="productList" required>
-                </div>
-                <div class="col-span-2">
-                    <input type="number" class="i-qty w-full px-3 py-2 border border-gray-300 rounded text-right focus:border-brand-500 outline-none" value="1" min="1" required oninput="calculate()">
-                </div>
-                <div class="col-span-2">
-                    <input type="number" class="i-rate w-full px-3 py-2 border border-gray-300 rounded text-right focus:border-brand-500 outline-none" value="0" min="0" required oninput="calculate()">
-                </div>
-                <div class="col-span-2 relative pr-8">
-                    <input type="text" class="i-total w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded text-right font-bold text-gray-700" readonly value="0.00">
-                    <button type="button" tabIndex="-1" class="absolute -right-2 top-1/2 transform -translate-y-1/2 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition p-2" onclick="removeItemRow(this)">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                    </button>
-                </div>
-            `;
-            cont.appendChild(div);
-            // Re-sequence numbers
-            reSequence();
-        }
+function printInv() { window.print(); }
 
-        function removeItemRow(btn) {
-            const row = btn.closest('.item-row');
-            if(document.querySelectorAll('.item-row').length > 1) {
-                row.remove();
-                reSequence();
-                calculate();
-            }
-        }
+function downloadPDF() {
+    const el = document.getElementById('print-area');
+    html2canvas(el, {scale:2}).then(canvas => {
+        const img = canvas.toDataURL('image/jpeg', 1.0);
+        const pdf = new jspdf.jsPDF('p','mm','a4');
+        const imgProps= pdf.getImageProperties(img);
+        const pW = pdf.internal.pageSize.getWidth();
+        const pH = (imgProps.height * pW) / imgProps.width;
+        pdf.addImage(img, 'JPEG', 0, 0, pW, pH);
+        pdf.save(`Invoice_${activeInvId}.pdf`);
+    });
+}
 
-        function reSequence() {
-            document.querySelectorAll('.item-row').forEach((row, idx) => {
-                row.firstElementChild.innerText = (idx + 1);
-            });
-        }
+function shareWA() {
+    const inv = localDB.invoices.find(i=>i.id===activeInvId);
+    let txt = encodeURIComponent(`Namaskar ${inv.cname}!\n\nYour invoice #${inv.id} from ${localDB.settings.cname} is ready.\n\nAmount: ₹${inv.total}\nDate: ${new Date(inv.date).toLocaleDateString()}\nStatus: ${inv.status}\n\nThank you for your business! 🌿\n\n(Note: Attach PDF downloaded separately if needed)`);
+    let no = inv.cmob.replace(/[^0-9]/g,''); if(no.length===10) no='91'+no;
+    window.open(`https://wa.me/${no}?text=${txt}`);
+}
 
-        function calculate() {
-            let sub = 0;
-            document.querySelectorAll('.item-row').forEach((row) => {
-                const qty = parseFloat(row.querySelector('.i-qty').value) || 0;
-                const rate = parseFloat(row.querySelector('.i-rate').value) || 0;
-                const tot = qty * rate;
-                row.querySelector('.i-total').value = tot.toFixed(2);
-                sub += tot;
-            });
+function shareSMS() {
+    const inv = localDB.invoices.find(i=>i.id===activeInvId);
+    let txt = encodeURIComponent(`Namaskar ${inv.cname}! Invoice #${inv.id} from ${localDB.settings.cname} is ready. Total: Rs.${inv.total}. Pls check.`);
+    window.open(`sms:${inv.cmob}?body=${txt}`);
+}
 
-            const gstPct = parseFloat(document.getElementById('invGst').value) || 0;
-            const gstAmt = (sub * gstPct) / 100;
-            const grd = sub + gstAmt;
-
-            document.getElementById('calcSub').innerText = '₹' + sub.toFixed(2);
-            document.getElementById('calcGstAmount').innerText = '₹' + gstAmt.toFixed(2);
-            document.getElementById('calcTotal').innerText = '₹' + grd.toFixed(2);
-
-            return { sub, gstPct, gstAmt, grd };
-        }
-
-        function saveAndPreview() {
-            const frm = document.getElementById('invoiceForm');
-            if(!frm.checkValidity()) {
-                frm.reportValidity();
-                return;
-            }
-
-            const items = [];
-            let validItems = true;
-            document.querySelectorAll('.item-row').forEach(row => {
-                const n = row.querySelector('.i-name').value;
-                const q = row.querySelector('.i-qty').value;
-                const r = row.querySelector('.i-rate').value;
-                const t = row.querySelector('.i-total').value;
-                if(!n) validItems = false;
-                items.push({name: n, qty: q, rate: r, total: t});
-            });
-
-            if(!validItems || items.length === 0) {
-                alert("Provide valid product names."); return;
-            }
-
-            const calc = calculate();
-            
-            const inv = {
-                id: document.getElementById('invNum').value,
-                date: document.getElementById('invDate').value,
-                customerName: document.getElementById('cName').value,
-                mobile: document.getElementById('cMobile').value,
-                email: document.getElementById('cEmail').value,
-                address: document.getElementById('cAddress').value,
-                notes: document.getElementById('invNotes').value,
-                items: items,
-                subtotal: calc.sub.toFixed(2),
-                gstPerc: calc.gstPct,
-                gstAmt: calc.gstAmt.toFixed(2),
-                total: calc.grd.toFixed(2)
-            };
-
-            // Save to DB
-            let data = getData();
-            // remove if editing
-            data = data.filter(i => i.id !== inv.id);
-            data.push(inv);
-            saveData(data);
-
-            viewInvoice(inv.id); // Triggers Preview Build and Navigation
-        }
-
-        // --- PREVIEW BUILDER ---
-        function viewInvoice(id) {
-            currentEditingId = id;
-            const data = getData();
-            const inv = data.find(i => i.id === id);
-            if(!inv) return;
-
-            // Header info
-            document.getElementById('p-invNum').innerText = inv.id;
-            document.getElementById('p-date').innerText = new Date(inv.date).toLocaleDateString('en-IN');
-            
-            // Cust info
-            document.getElementById('p-name').innerText = inv.customerName;
-            document.getElementById('p-mobile').innerText = inv.mobile;
-            document.getElementById('p-email').innerText = inv.email ? inv.email : '';
-            document.getElementById('p-address').innerText = inv.address;
-
-            // Notes
-            if(inv.notes) document.getElementById('p-notes').innerText = inv.notes;
-
-            // Items table
-            const tb = document.getElementById('p-items');
-            tb.innerHTML = '';
-            inv.items.forEach((it, idx) => {
-                const tr = document.createElement('tr');
-                tr.className = "border-b border-gray-100 last:border-0";
-                tr.innerHTML = `
-                    <td class="py-3 px-4 text-center text-gray-500">${idx+1}</td>
-                    <td class="py-3 px-4 font-semibold">${it.name}</td>
-                    <td class="py-3 px-4 text-right">${it.qty}</td>
-                    <td class="py-3 px-4 text-right">₹${it.rate}</td>
-                    <td class="py-3 px-4 text-right font-bold text-gray-900">₹${it.total}</td>
-                `;
-                tb.appendChild(tr);
-            });
-
-            // Totals
-            document.getElementById('p-sub').innerText = '₹' + inv.subtotal;
-            document.getElementById('p-gstPct').innerText = inv.gstPerc;
-            document.getElementById('p-gstAmt').innerText = '₹' + inv.gstAmt;
-            document.getElementById('p-total').innerText = '₹' + inv.total;
-
-            navigate('preview');
-        }
-
-        // --- EXPORT TOOLS ---
-
-        function generatePDF() {
-            const el = document.getElementById('print-container');
-            const opt = {
-                margin:       0,
-                filename:     `Invoice_${currentEditingId}.pdf`,
-                image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, useCORS: true },
-                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-            };
-            html2pdf().set(opt).from(el).save();
-        }
-
-        function waShare() {
-            const inv = getData().find(i => i.id === currentEditingId);
-            if(!inv || !inv.mobile) return;
-            
-            let pStr = '';
-            inv.items.forEach(i => pStr += `- ${i.name} (${i.qty}) = ₹${i.total}\n`);
-
-            const msg = `Namaste ${inv.customerName},\nGreenearth Organic taraf thi tamaru bill taiyar che.\n\nInvoice No: ${inv.id}\n\nProducts:\n${pStr}\nTotal Amount: ₹${inv.total}\n\nAabhar 🙏`;
-            
-            let m = inv.mobile.replace(/[^0-9]/g, '');
-            if(m.length === 10) m = '91' + m;
-
-            window.open(`https://wa.me/${m}?text=${encodeURIComponent(msg)}`, '_blank');
-        }
-
-        function emailShare() {
-            const inv = getData().find(i => i.id === currentEditingId);
-            if(!inv) return;
-            if(!inv.email) {
-                alert("No email address saved for this customer.");
-                return;
-            }
-
-            // Using EmailJS structure. Real implementation requires Keys in HTML head.
-            alert(`Drafting email to: ${inv.email}\nNote: To actually send emails via browser, owner needs to configure their free EmailJS Service ID and Template ID in the code.\n\nFor now, the PDF will be generated so you can manually attach it.`);
-            generatePDF();
-        }
-
-    </script>
+checkAuth();
+</script>
 </body>
 </html>

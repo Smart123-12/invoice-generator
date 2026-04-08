@@ -112,20 +112,18 @@
         <!-- Navigation Bar -->
         <nav class="bg-brand-900 shadow sm:border-t-4 border-accent-500">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-between h-20">
-                    <div class="flex items-center">
-                        <div class="flex-shrink-0 flex items-center">
-                            <div>
-                                <h1 class="text-2xl font-bold text-white tracking-tight">Greenearth <span class="text-accent-500">Organic</span></h1>
-                                <p class="text-xs text-brand-100">Improving Agriculture, Improving Lives</p>
-                            </div>
+                <div class="flex flex-col md:flex-row justify-between items-center py-4 gap-4">
+                    <div class="flex w-full md:w-auto justify-between items-center">
+                        <div>
+                            <h1 class="text-2xl font-bold text-white tracking-tight">Greenearth <span class="text-accent-500">Organic</span></h1>
+                            <p class="text-xs text-brand-100">Improving Agriculture, Improving Lives</p>
                         </div>
                     </div>
-                    <div class="flex items-center space-x-4">
+                    <div class="flex flex-wrap justify-center items-center gap-2 md:gap-4">
                         <button onclick="navigate('dashboard')" class="text-white hover:bg-brand-800 px-3 py-2 rounded-md font-medium text-sm transition">Dashboard</button>
-                        <button onclick="navigate('create')" class="bg-accent-500 text-brand-900 hover:bg-accent-400 px-4 py-2 rounded-md font-semibold text-sm shadow-sm transition">➕ New Invoice</button>
+                        <button onclick="navigate('create')" class="bg-accent-500 text-brand-900 hover:bg-accent-400 px-3 py-2 rounded-md font-semibold text-sm shadow-sm transition">➕ New</button>
                         <button onclick="navigate('settings')" class="text-brand-100 hover:text-white px-3 py-2 rounded-md font-medium text-sm transition">⚙️ Settings</button>
-                        <button onclick="logout()" class="text-brand-100 hover:text-white ml-4 text-sm font-medium transition">Logout</button>
+                        <button onclick="logout()" class="text-red-400 hover:text-red-300 md:ml-2 px-3 py-2 text-sm font-medium transition">Logout</button>
                     </div>
                 </div>
             </div>

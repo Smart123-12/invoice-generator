@@ -360,7 +360,9 @@ function checkAuth() {
 
 function doLogin(e) {
     e.preventDefault();
-    if(document.getElementById('l-user').value === localDB.settings.user && document.getElementById('l-pass').value === localDB.settings.pass) {
+    const u = document.getElementById('l-user').value.trim().toLowerCase();
+    const p = document.getElementById('l-pass').value.trim();
+    if(u === localDB.settings.user.toLowerCase() && p === localDB.settings.pass) {
         logActivity("Password Login OK");
         sessionStorage.setItem('auth_step', 'pin');
         checkAuth();
@@ -369,7 +371,7 @@ function doLogin(e) {
 
 function doPin(e) {
     e.preventDefault();
-    if(document.getElementById('l-pin').value === localDB.settings.pin) {
+    if(document.getElementById('l-pin').value.trim() === localDB.settings.pin) {
         sessionStorage.setItem('auth_step', 'full');
         document.getElementById('l-pin').value = '';
         checkAuth();

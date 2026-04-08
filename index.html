@@ -21,7 +21,7 @@
             #sidebar { display: none; }
             #bottom-nav { display: flex; }
         }
-        #bottom-nav { display: none; position: fixed; bottom: 0; width: 100%; background: #2d7a2d; color: white; height: 60px; justify-content: space-around; items-center; z-index: 50; }
+        #bottom-nav { display: none; position: fixed; bottom: 0; width: 100%; background: #2d7a2d; color: white; height: 60px; justify-content: space-around; align-items: center; z-index: 50; }
         .nav-item { padding: 12px; cursor: pointer; text-align: center; font-size: 13px; }
         .nav-item:hover, .nav-item.active { background: #1e5a1e; }
         .btn { background: #2d7a2d; color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer; border: none; }
@@ -44,25 +44,29 @@
 <body>
 
 <!-- Login View -->
-<div id="view-login" class="view h-screen flex justify-center items-center bg-gray-100 p-4">
-    <div class="card w-full max-w-sm">
-        <h2 class="text-2xl font-bold text-center text-[#2d7a2d] mb-6">🌿 Greenearth Organic</h2>
-        <form onsubmit="doLogin(event)">
-            <label>Username</label><input type="text" id="l-user" required>
-            <label>Password</label><input type="password" id="l-pass" required>
-            <button type="submit" class="btn w-full mt-4">Login</button>
-        </form>
+<div id="view-login" class="view h-screen bg-gray-100">
+    <div class="h-full flex justify-center items-center p-4">
+        <div class="card w-full max-w-sm">
+            <h2 class="text-2xl font-bold text-center text-[#2d7a2d] mb-6">🌿 Greenearth Organic</h2>
+            <form onsubmit="doLogin(event)">
+                <label>Username</label><input type="text" id="l-user" required>
+                <label>Password</label><input type="password" id="l-pass" required>
+                <button type="submit" class="btn w-full mt-4">Login</button>
+            </form>
+        </div>
     </div>
 </div>
 
 <!-- PIN View -->
-<div id="view-pin" class="view h-screen flex justify-center items-center bg-gray-100 p-4">
-    <div class="card w-full max-w-sm">
-        <h2 class="text-xl font-bold text-center mb-6">Enter 2FA PIN</h2>
-        <form onsubmit="doPin(event)">
-            <input type="password" id="l-pin" maxlength="4" placeholder="4-digit PIN" required class="text-center text-xl tracking-widest">
-            <button type="submit" class="btn w-full mt-4">Verify</button>
-        </form>
+<div id="view-pin" class="view h-screen bg-gray-100">
+    <div class="h-full flex justify-center items-center p-4">
+        <div class="card w-full max-w-sm">
+            <h2 class="text-xl font-bold text-center mb-6">Enter 2FA PIN</h2>
+            <form onsubmit="doPin(event)">
+                <input type="password" id="l-pin" maxlength="4" placeholder="4-digit PIN" required class="text-center text-xl tracking-widest">
+                <button type="submit" class="btn w-full mt-4">Verify</button>
+            </form>
+        </div>
     </div>
 </div>
 

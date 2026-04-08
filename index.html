@@ -44,8 +44,8 @@
 
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
-        .view { display: none; }
-        .view.active { display: block; animation: fadeIn 0.3s ease; }
+        .view { display: none !important; }
+        .view.active { display: block !important; animation: fadeIn 0.3s ease; }
         
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(5px); }
@@ -80,7 +80,7 @@
                 <h2 class="text-center text-3xl font-extrabold text-gray-900">Owner Portal</h2>
                 <p class="mt-2 text-center text-sm text-gray-600">Greenearth Organic Secure System</p>
             </div>
-            <form class="mt-8 space-y-6" id="loginForm" onsubmit="handleLogin(event)">
+            <div class="mt-8 space-y-6" id="loginForm">
                 <div class="rounded-md shadow-sm space-y-4">
                     <div>
                         <label for="username" class="block text-sm font-medium text-gray-700">Username</label>
@@ -93,11 +93,11 @@
                 </div>
 
                 <div>
-                    <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-base font-medium text-white bg-brand-900 hover:bg-brand-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 transition-colors">
+                    <button type="button" onclick="handleLogin(event)" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-base font-medium text-white bg-brand-900 hover:bg-brand-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 transition-colors">
                         Sign In to System
                     </button>
                 </div>
-            </form>
+            </div>
         </div>
     </div>
 
@@ -121,6 +121,7 @@
                     <div class="flex items-center space-x-4">
                         <button onclick="navigate('dashboard')" class="text-white hover:bg-brand-800 px-3 py-2 rounded-md font-medium text-sm transition">Dashboard</button>
                         <button onclick="navigate('create')" class="bg-accent-500 text-brand-900 hover:bg-accent-400 px-4 py-2 rounded-md font-semibold text-sm shadow-sm transition">➕ New Invoice</button>
+                        <button onclick="navigate('settings')" class="text-brand-100 hover:text-white px-3 py-2 rounded-md font-medium text-sm transition">⚙️ Settings</button>
                         <button onclick="logout()" class="text-brand-100 hover:text-white ml-4 text-sm font-medium transition">Logout</button>
                     </div>
                 </div>
@@ -185,6 +186,25 @@
                                 <!-- Populated dynamically -->
                             </tbody>
                         </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings View -->
+            <div id="settingsView" class="view hidden max-w-3xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+                <div class="bg-white shadow-sm border border-gray-100 rounded-xl overflow-hidden p-6 mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4">Manage Products</h2>
+                    <p class="text-sm text-gray-500 mb-6">Add or remove products shown in the invoice dropdown menu.</p>
+                    
+                    <div class="flex gap-2 mb-6">
+                        <input type="text" id="newProductName" class="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-brand-500 focus:border-brand-500" placeholder="E.g. Super Neem Extract">
+                        <button type="button" onclick="addProduct()" class="px-4 py-2 bg-brand-600 text-white rounded-md font-medium hover:bg-brand-700">Add Product</button>
+                    </div>
+
+                    <div class="border rounded-lg overflow-hidden">
+                        <ul id="settingsProductList" class="divide-y divide-gray-200">
+                            <!-- JS populated -->
+                        </ul>
                     </div>
                 </div>
             </div>
@@ -254,10 +274,7 @@
                                 <div id="itemsContainer" class="space-y-3 relative">
                                     <!-- Dynamic rows -->
                                     <datalist id="productList">
-                                        <option value="Organic Manure (Khatar)">
-                                        <option value="Bio Fertilizer">
-                                        <option value="Compost">
-                                        <option value="Neem Cake">
+                                        <!-- Populated via JS -->
                                     </datalist>
                                 </div>
 
@@ -448,9 +465,13 @@
     <script>
         // Init EmailJS Config - using a dummy public key for safety
         // Owner must replace this with their actual key from EmailJS dashboard
-        try {
-            emailjs.init("YOUR_EMAILJS_PUBLIC_KEY");
-        } catch(e) { console.log("EmailJS init note: Add keys for email service."); }
+        setTimeout(function() {
+            try {
+                if(typeof emailjs !== 'undefined') {
+                    emailjs.init("YOUR_EMAILJS_PUBLIC_KEY");
+                }
+            } catch(e) { console.log("EmailJS init note: Add keys for email service."); }
+        }, 1000);
 
         // --- AUTH & STATE ---
         const DB_KEY = 'greenearth_owner_db';
@@ -464,14 +485,14 @@
 
         function handleLogin(e) {
             e.preventDefault();
-            const u = document.getElementById('username').value;
-            const p = document.getElementById('password').value;
+            const u = document.getElementById('username').value.trim().toLowerCase();
+            const p = document.getElementById('password').value.trim();
             // Secure Owner Login
             if(u === 'admin' && p === '1234') {
                 sessionStorage.setItem('owner_auth', 'true');
                 showApp();
             } else {
-                alert("ACCESS DENIED. Invalid Credentials.");
+                alert("ACCESS DENIED. Invalid Username or Password.\nHint: Username = admin | Password = 1234");
             }
         }
 
@@ -494,7 +515,7 @@
         // --- NAVIGATION & ROUTING ---
         function navigate(route) {
             // Hide all sub-views
-            ['dashboardView', 'createView', 'previewView'].forEach(id => {
+            ['dashboardView', 'createView', 'previewView', 'settingsView'].forEach(id => {
                 document.getElementById(id).classList.remove('active');
                 setTimeout(() => document.getElementById(id).style.display = 'none', 10);
             });
@@ -514,6 +535,11 @@
                     document.getElementById('previewView').style.display = 'block';
                     setTimeout(() => document.getElementById('previewView').classList.add('active'), 10);
                 }
+                else if (route === 'settings') {
+                    renderSettings();
+                    document.getElementById('settingsView').style.display = 'block';
+                    setTimeout(() => document.getElementById('settingsView').classList.add('active'), 10);
+                }
             }, 20);
         }
 
@@ -524,6 +550,58 @@
         function saveData(data) {
             localStorage.setItem(DB_KEY, JSON.stringify(data));
         }
+
+        // --- SETTINGS (PRODUCTS) ---
+        const PROD_KEY = 'greenearth_products';
+        const defaultProducts = ['Organic Manure (Khatar)', 'Bio Fertilizer', 'Compost', 'Neem Cake'];
+
+        function getProducts() {
+            return JSON.parse(localStorage.getItem(PROD_KEY)) || defaultProducts;
+        }
+
+        function renderSettings() {
+            const list = document.getElementById('settingsProductList');
+            list.innerHTML = '';
+            getProducts().forEach((p, idx) => {
+                list.innerHTML += `<li class="px-4 py-3 flex justify-between items-center hover:bg-gray-50">
+                    <span class="text-gray-800 font-medium">${p}</span>
+                    <button type="button" onclick="removeProduct(${idx})" class="text-red-500 hover:text-red-700 text-sm font-medium">Remove</button>
+                </li>`;
+            });
+            updateDataList();
+        }
+
+        function addProduct() {
+            const val = document.getElementById('newProductName').value.trim();
+            if(!val) return;
+            const prods = getProducts();
+            if(!prods.includes(val)) {
+                prods.push(val);
+                localStorage.setItem(PROD_KEY, JSON.stringify(prods));
+            }
+            document.getElementById('newProductName').value = '';
+            renderSettings();
+        }
+
+        function removeProduct(idx) {
+            let prods = getProducts();
+            prods.splice(idx, 1);
+            localStorage.setItem(PROD_KEY, JSON.stringify(prods));
+            renderSettings();
+        }
+
+        function updateDataList() {
+            const dl = document.getElementById('productList');
+            if(!dl) return;
+            dl.innerHTML = '';
+            getProducts().forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p;
+                dl.appendChild(opt);
+            });
+        }
+        
+        setTimeout(updateDataList, 100);
 
         // --- DASHBOARD ---
         function renderDashboard() {

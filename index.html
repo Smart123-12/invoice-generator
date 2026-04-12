@@ -43,32 +43,7 @@
 </head>
 <body>
 
-<!-- Login View -->
-<div id="view-login" class="view h-screen bg-gray-100">
-    <div class="h-full flex justify-center items-center p-4">
-        <div class="card w-full max-w-sm">
-            <h2 class="text-2xl font-bold text-center text-[#2d7a2d] mb-6">🌿 Greenearth Organic</h2>
-            <form onsubmit="doLogin(event)">
-                <label>Username</label><input type="text" id="l-user" required>
-                <label>Password</label><input type="password" id="l-pass" required>
-                <button type="submit" class="btn w-full mt-4">Login</button>
-            </form>
-        </div>
-    </div>
-</div>
 
-<!-- PIN View -->
-<div id="view-pin" class="view h-screen bg-gray-100">
-    <div class="h-full flex justify-center items-center p-4">
-        <div class="card w-full max-w-sm">
-            <h2 class="text-xl font-bold text-center mb-6">Enter 2FA PIN</h2>
-            <form onsubmit="doPin(event)">
-                <input type="password" id="l-pin" maxlength="4" placeholder="4-digit PIN" required class="text-center text-xl tracking-widest">
-                <button type="submit" class="btn w-full mt-4">Verify</button>
-            </form>
-        </div>
-    </div>
-</div>
 
 <!-- Main App Layout -->
 <div id="app-layout" class="view">
@@ -97,7 +72,7 @@
 
     <!-- Content Area -->
     <div id="main-content" class="p-4 md:p-8 relative">
-        <div id="timeout-warn" class="hidden absolute top-0 left-0 w-full bg-yellow-500 text-white text-center py-2 z-50">Auto-logout in <span id="tout-sec">120</span>s. Click anywhere to stay logged in.</div>
+
         
         <!-- DASHBOARD -->
         <div id="view-dashboard" class="view">
@@ -233,10 +208,7 @@
                 <label>Upload Logo (max 100kb)</label><input type="file" id="s-logo-upload" accept="image/*" onchange="convertLogo()">
                 <div id="s-logo-preview" class="text-4xl my-2">🌿</div>
                 
-                <h3 class="font-bold border-b pb-2 mt-6 mb-2">Security</h3>
-                <label>Username</label><input type="text" id="s-user">
-                <label>Password</label><input type="password" id="s-pass">
-                <label>2FA PIN (4 digits)</label><input type="password" id="s-pin" maxlength="4">
+
                 
                 <button class="btn w-full mt-4" onclick="saveSettings()">Save Settings</button>
             </div>
@@ -322,7 +294,7 @@
 <script>
 /* ================= SYSTEM LOGIC ================= */
 const DB = {
-    settings: { cname: "Greenearth Organic", tag: "Improving Agriculture, Improving Lives", gst: "24AAAAA0000A1Z5", pan: "AAAAA0000A", addr: "Gujarat", phone: "+91 0000000000", terms: "1. Subject to Gujarat Jurisdiction.\n2. Goods once sold will not be returned.\n3. Payment due in 7 days.", logo: "🌿", user: "admin", pass: "greenearth123", pin: "1234" },
+    settings: { cname: "Greenearth Organic", tag: "Improving Agriculture, Improving Lives", gst: "24AAAAA0000A1Z5", pan: "AAAAA0000A", addr: "Gujarat", phone: "+91 0000000000", terms: "1. Subject to Gujarat Jurisdiction.\n2. Goods once sold will not be returned.\n3. Payment due in 7 days.", logo: "🌿" },
     invoices: [], customers: [], inventory: [], logs: []
 };
 
@@ -334,80 +306,17 @@ if(!localDB.settings.cname) localDB.settings = DB.settings;
 if(!localDB.logs) localDB.logs = [];
 
 let activeInvId = null;
-let timer = null;
-let inactivityTimer = null;
-let timeLeft = 900; // 15 mins
 
 function saveData() { localStorage.setItem('geo_db', JSON.stringify(localDB)); }
 
-// -- AUTH -- 
+// -- AUTH (removed) -- Open app directly
 function checkAuth() {
-    clearTimeout(inactivityTimer); clearInterval(timer);
-    const mode = sessionStorage.getItem('auth_step');
-    if(mode === 'full') {
-        document.querySelectorAll('.view').forEach(e=>e.classList.remove('active'));
-        document.getElementById('app-layout').classList.add('active');
-        nav('dashboard');
-        startInactivity();
-    } else if(mode === 'pin') {
-        document.querySelectorAll('.view').forEach(e=>e.classList.remove('active'));
-        document.getElementById('view-pin').classList.add('active');
-    } else {
-        document.querySelectorAll('.view').forEach(e=>e.classList.remove('active'));
-        document.getElementById('view-login').classList.add('active');
-    }
+    document.querySelectorAll('.view').forEach(e=>e.classList.remove('active'));
+    document.getElementById('app-layout').classList.add('active');
+    nav('dashboard');
 }
 
-function doLogin(e) {
-    e.preventDefault();
-    const u = document.getElementById('l-user').value.trim().toLowerCase();
-    const p = document.getElementById('l-pass').value.trim();
-    if(u === localDB.settings.user.toLowerCase() && p === localDB.settings.pass) {
-        logActivity("Password Login OK");
-        sessionStorage.setItem('auth_step', 'pin');
-        checkAuth();
-    } else { alert("Invalid Credentials"); logActivity("Failed Login Attempt"); }
-}
-
-function doPin(e) {
-    e.preventDefault();
-    if(document.getElementById('l-pin').value.trim() === localDB.settings.pin) {
-        sessionStorage.setItem('auth_step', 'full');
-        document.getElementById('l-pin').value = '';
-        checkAuth();
-    } else { alert("Invalid PIN"); }
-}
-
-function doLogout() {
-    sessionStorage.removeItem('auth_step');
-    logActivity("Logged out");
-    checkAuth();
-}
-
-function logActivity(act) {
-    localDB.logs.unshift({ date: new Date().toLocaleString(), action: act, d: navigator.userAgent.substring(0,30) });
-    if(localDB.logs.length > 20) localDB.logs.pop();
-    saveData();
-}
-
-function startInactivity() {
-    timeLeft = 900;
-    document.getElementById('timeout-warn').classList.add('hidden');
-    clearInterval(timer);
-    timer = setInterval(() => {
-        timeLeft--;
-        if(timeLeft <= 120 && timeLeft > 0) {
-            document.getElementById('timeout-warn').classList.remove('hidden');
-            document.getElementById('tout-sec').innerText = timeLeft;
-        } else if(timeLeft <= 0) {
-            doLogout();
-        }
-    }, 1000);
-}
-
-// Reset timer on activity
-document.addEventListener('click', () => { if(sessionStorage.getItem('auth_step')==='full') startInactivity(); });
-document.addEventListener('keypress', () => { if(sessionStorage.getItem('auth_step')==='full') startInactivity(); });
+function doLogout() { /* no-op: login removed */ }
 
 // -- ROUTER --
 function nav(page) {
@@ -611,7 +520,7 @@ function renderReports() {
 
 // -- SETTINGS --
 function initSettings() {
-    ['cname','tag','gst','pan','addr','phone','terms','user','pass','pin'].forEach(k => {
+    ['cname','tag','gst','pan','addr','phone','terms'].forEach(k => {
         if(document.getElementById('s-'+k)) document.getElementById('s-'+k).value = localDB.settings[k];
     });
     document.getElementById('s-logo-preview').innerHTML = localDB.settings.logo || '🌿';
@@ -626,8 +535,8 @@ function convertLogo() {
     const r = new FileReader(); r.onload = e => { localDB.settings.logo = `<img src="${e.target.result}" style="max-height:40px">`; document.getElementById('s-logo-preview').innerHTML = localDB.settings.logo; }; r.readAsDataURL(file);
 }
 function saveSettings() {
-    ['cname','tag','gst','pan','addr','phone','terms','user','pass','pin'].forEach(k => {
-        localDB.settings[k] = document.getElementById('s-'+k).value;
+    ['cname','tag','gst','pan','addr','phone','terms'].forEach(k => {
+        if(document.getElementById('s-'+k)) localDB.settings[k] = document.getElementById('s-'+k).value;
     });
     saveData(); alert("Settings Saved");
 }
